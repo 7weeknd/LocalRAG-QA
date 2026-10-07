@@ -1,0 +1,40 @@
+# ---- Python 编译产物 ----
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ---- 虚拟环境（体积大，不入库；用 requirements.txt 还原）----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- 打包 / 构建产物 ----
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---- 测试与静态检查缓存 ----
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- IDE / 编辑器 ----
+.idea/
+.vscode/
+
+# ---- 环境变量与密钥 ----
+# .env.example 会入库（给人看要配哪些变量）；.env 含真实 Key，绝不入库
+.env
+.env.local
+
+# ---- 操作系统杂项 ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 日志 ----
+*.log
