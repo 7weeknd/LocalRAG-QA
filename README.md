@@ -1,10 +1,16 @@
 # LocalRAG-QA
 
-**本地私有化 RAG 知识库问答系统** · 检索算法全部手写（TF-IDF / BM25 / RRF）
+**本地私有化 RAG 知识库问答系统（全栈版）** · 检索算法全部手写（TF-IDF / BM25 / RRF）
 
 基于本地大模型构建的检索增强生成（RAG）问答系统，面向电商客服知识库场景，
 对「退换货 / 会员 / 物流 / 发票 / 优惠券 / FAQ」六类知识做问答。
 **数据全流程不出本机**，TF-IDF、BM25、RRF 等检索算法均为手写实现，不依赖 LangChain 等框架。
+
+全栈能力（v0.2.0 起）：
+
+- **用户体系**：注册 / 登录，密码 bcrypt 哈希存储，JWT 令牌鉴权
+- **数据持久化**：问答记录自动写入 MySQL（SQLAlchemy ORM），历史可查
+- **Web 界面**：单页应用（原生 HTML/JS，无前端构建链），登录后在线问答
 
 ---
 
@@ -63,6 +69,15 @@
 - 索引**一次性构建到内存**，请求阶段只做检索（性能调优思路）；
 - FastAPI + Pydantic 服务化，返回结构化 JSON。
 
+### 8. 全栈化：用户体系 + 数据持久化
+- **认证流**：注册（用户名查重 → bcrypt 哈希入库）→ 登录（验密 → 签发 JWT）；
+  之后每个请求带 `Authorization: Bearer <token>`，服务端验签识别用户。
+- **密码安全**：bcrypt 慢哈希 + 自动加盐，相同密码两次哈希结果不同，暴破代价极高。
+- **落库设计**：登录版 `/api/ask` 在生成答案后由**服务端**写入 `chat_history`
+  （`user_id` 从 token 解析，前端无法伪造），公开版 `/ask` 不落库。
+- **自动建库建表**：启动时用 SQLAlchemy 自动 `CREATE DATABASE IF NOT EXISTS` + `create_all`，
+  装好 MySQL 即可用，零手工 SQL；MySQL 未启动时仅禁用登录/历史功能，纯问答不受影响。
+
 ---
 
 ## 三、快速开始
@@ -98,12 +113,34 @@ python -m rag_qa.cli
 
 ### 4. 启动 API 服务
 ```bash
-uvicorn rag_qa.app:app --host 0.0.0.0 --port 8000
-curl -X POST http://127.0.0.1:8000/ask -H "Content-Type: application/json" \
+uvicorn rag_qa.app:app --host 0.0.0.0 --port 8010
+curl -X POST http://127.0.0.1:8010/ask -H "Content-Type: application/json" \
      -d '{"question":"七天无理由退货运费谁出？"}'
 ```
 
-### 5. 跑测试
+### 5. 全栈版：Web 界面 + 注册登录 + 对话历史入库
+
+1. 确保本地 MySQL 已启动（端口 3306）；
+2. 复制 `.env.example` 为 `.env`，填上你的 MySQL 账号密码（`.env` 已被 git 忽略，不会泄露）；
+3. 双击 `start_web.bat`（或执行
+   `uvicorn rag_qa.app:app --host 0.0.0.0 --port 8010`），浏览器自动打开
+   `http://127.0.0.1:8010`；
+4. 页面上「注册新账号」→ 登录 → 开始问答，记录自动入库，点「历史」随时回看。
+
+> 首次启动会自动创建 `rag_qa` 库和 `users` / `chat_history` 两张表，无需手工执行 SQL。
+
+全栈版 API 一览：
+
+| 方法 | 路径 | 说明 | 是否需要登录 |
+|------|------|------|--------------|
+| POST | `/api/auth/register` | 注册（用户名 3-20 字符，密码 ≥6 位） | 否 |
+| POST | `/api/auth/login` | 登录，返回 JWT 令牌 | 否 |
+| POST | `/api/ask` | 问答，**自动写入对话历史** | 是（Bearer Token） |
+| GET  | `/api/chat/history?limit=50` | 查自己的对话历史（最新在前） | 是（Bearer Token） |
+| POST | `/ask` | 公开问答（不记录历史） | 否 |
+| GET  | `/health` | 服务状态 + 当前模型 | 否 |
+
+### 6. 跑测试
 ```bash
 python tests/test_retrieval.py
 ```
@@ -114,18 +151,28 @@ python tests/test_retrieval.py
 ```
 LocalRAG-QA/
 ├── rag_qa/
-│   ├── config.py      # 配置（环境变量覆盖）
+│   ├── config.py      # 配置（.env + 环境变量覆盖）
 │   ├── tokenizer.py   # 中文分词
 │   ├── chunker.py     # 文档加载 + 分块
 │   ├── embeddings.py  # TF-IDF 向量化
 │   ├── bm25.py        # BM25 关键词检索
 │   ├── hybrid.py      # RRF 混合融合
 │   ├── llm.py         # 大模型调用（OpenAI 兼容）
-│   ├── pipeline.py    # RAG 主流程编排
+│   ├── pipeline.py    # RAG 主流程编排（含单例 get_pipeline）
 │   ├── cli.py         # 命令行问答
-│   └── app.py         # FastAPI 服务
+│   ├── app.py         # FastAPI 入口（lifespan 建索引 + 自动建库建表）
+│   ├── database.py    # SQLAlchemy 引擎 / 会话 / 自动建库
+│   ├── models.py      # ORM 模型：User / ChatHistory
+│   ├── schemas.py     # Pydantic 入参出参模型
+│   ├── security.py    # bcrypt 密码哈希 + JWT 签发校验
+│   └── routes.py      # 注册/登录/问答落库/历史查询
+├── static/
+│   └── index.html     # 单页前端（登录卡片 + 问答 + 历史侧栏）
 ├── data/docs/         # 知识库（6 篇电商客服文档）
 ├── tests/             # 冒烟测试
+├── .env.example       # 配置模板（复制为 .env 使用；.env 不入库）
+├── start.bat          # 命令行版一键启动
+├── start_web.bat      # Web 全栈版一键启动（自动开浏览器）
 ├── requirements.txt
 └── README.md
 ```

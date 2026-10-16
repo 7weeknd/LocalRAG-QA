@@ -25,12 +25,13 @@
     display: flex; flex-direction: column; align-items: center;
     padding: 24px 16px; color: var(--ink);
   }
+  .hidden { display: none !important; }
   .app {
     width: 100%; max-width: 760px; display: flex; flex-direction: column;
     height: calc(100vh - 48px); min-height: 520px;
   }
   header {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
     padding: 18px 22px; background: var(--card);
     border-radius: 18px 18px 0 0; box-shadow: 0 10px 30px rgba(79,70,229,.12);
     border-bottom: 1px solid #eef0f6;
@@ -44,10 +45,17 @@
   }
   header h1 { font-size: 18px; font-weight: 700; }
   header .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .badge {
     padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
     background: #eef2ff; color: var(--brand);
   }
+  .who { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .ghost {
+    padding: 6px 12px; border: 1px solid #dbe0ea; border-radius: 10px; cursor: pointer;
+    background: #fff; color: var(--ink); font-size: 13px; font-weight: 600;
+  }
+  .ghost:hover { border-color: var(--brand); color: var(--brand); }
   .chat {
     flex: 1; overflow-y: auto; padding: 22px;
     background: #fafbfe; border-left: 1px solid #eef0f6; border-right: 1px solid #eef0f6;
@@ -90,18 +98,87 @@
     font-size: 15px; outline: none; transition: border .15s, box-shadow .15s;
   }
   input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
-  button {
+  button.primary {
     padding: 0 22px; border: none; border-radius: 14px; cursor: pointer;
     background: linear-gradient(135deg, var(--brand), var(--brand2)); color: #fff;
     font-size: 15px; font-weight: 600; transition: opacity .15s, transform .05s;
   }
-  button:hover { opacity: .9; }
-  button:active { transform: scale(.97); }
-  button:disabled { opacity: .55; cursor: not-allowed; }
+  button.primary:hover { opacity: .9; }
+  button.primary:active { transform: scale(.97); }
+  button.primary:disabled { opacity: .55; cursor: not-allowed; }
+
+  /* ---------- 登录卡片 ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(30,41,59,.45);
+    display: flex; align-items: center; justify-content: center; z-index: 50;
+  }
+  .auth-card {
+    width: 100%; max-width: 380px; background: var(--card); border-radius: 20px;
+    padding: 36px 32px 28px; text-align: center;
+    box-shadow: 0 20px 60px rgba(15,23,42,.25);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .auth-card .logo { margin: 0 auto; width: 56px; height: 56px; font-size: 26px; border-radius: 16px; }
+  .auth-card h2 { font-size: 22px; }
+  .auth-card .note { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .auth-row { display: flex; gap: 10px; }
+  .auth-row button { flex: 1; padding: 12px 0; }
+  .auth-row .secondary {
+    border: 1px solid #dbe0ea; border-radius: 14px; background: #fff; color: var(--ink);
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .auth-row .secondary:hover { border-color: var(--brand); color: var(--brand); }
+  .auth-tip { font-size: 13px; min-height: 18px; color: var(--miss); }
+
+  /* ---------- 历史侧栏 ---------- */
+  .mask {
+    position: fixed; inset: 0; background: rgba(15,23,42,.3); z-index: 40;
+  }
+  .panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; max-width: 88vw;
+    background: #fff; z-index: 41; box-shadow: -12px 0 40px rgba(15,23,42,.18);
+    display: flex; flex-direction: column; transition: transform .2s;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 20px; border-bottom: 1px solid #eef0f6; font-size: 15px;
+  }
+  .panel-close { border: none; background: #f1f5f9; width: 32px; height: 32px; border-radius: 10px; cursor: pointer; font-size: 16px; }
+  .panel-list { flex: 1; overflow-y: auto; padding: 12px; }
+  .h-item { border: 1px solid #eef0f6; border-radius: 12px; margin-bottom: 10px; overflow: hidden; background: #fafbfe; }
+  .h-q {
+    padding: 10px 12px; cursor: pointer; font-size: 14px; font-weight: 600;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .h-q .time { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 400; white-space: nowrap; }
+  .h-q .flag { width: 8px; height: 8px; border-radius: 50%; background: var(--miss); flex-shrink: 0; }
+  .h-q .flag.hit { background: var(--hit); }
+  .h-a {
+    padding: 0 12px 12px; font-size: 13px; color: var(--muted); line-height: 1.6;
+    white-space: pre-wrap; word-break: break-word; border-top: 1px dashed #eef0f6; padding-top: 10px;
+  }
+  .empty-mini { text-align: center; color: var(--muted); font-size: 13px; margin-top: 40px; }
 </style>
 </head>
 <body>
-  <div class="app">
+  <!-- ============ 登录 / 注册卡片（未登录时显示） ============ -->
+  <div class="overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="logo">AI</div>
+      <h2 id="authTitle">登录 LocalRAG-QA</h2>
+      <div class="note">本地大模型 + 私有知识库 · 问答记录自动保存</div>
+      <input id="username" placeholder="用户名（3-20 个字符）" autocomplete="username" />
+      <input id="password" type="password" placeholder="密码（至少 6 位）" autocomplete="current-password" />
+      <div class="auth-row">
+        <button class="primary" id="loginBtn">登 录</button>
+        <button class="secondary" id="registerBtn">注册新账号</button>
+      </div>
+      <div class="auth-tip" id="authTip"></div>
+    </div>
+  </div>
+
+  <!-- ============ 主界面（登录后可见） ============ -->
+  <div class="app hidden" id="mainApp">
     <header>
       <div class="title">
         <div class="logo">AI</div>
@@ -110,7 +187,12 @@
           <div class="sub">本地大模型 + 私有知识库</div>
         </div>
       </div>
-      <span class="badge" id="modelBadge">加载中…</span>
+      <div class="actions">
+        <span class="badge" id="modelBadge">加载中…</span>
+        <span class="who" id="who"></span>
+        <button class="ghost" id="historyBtn">历史</button>
+        <button class="ghost" id="logoutBtn">退出</button>
+      </div>
     </header>
 
     <div class="chat" id="chat">
@@ -122,11 +204,114 @@
 
     <div class="inputbar">
       <input id="q" placeholder="输入你的问题…" autocomplete="off" />
-      <button id="send">发送</button>
+      <button class="primary" id="send">发送</button>
     </div>
   </div>
 
+  <!-- ============ 历史记录侧栏 ============ -->
+  <div class="mask hidden" id="mask"></div>
+  <div class="panel hidden" id="panel">
+    <div class="panel-head">
+      <b>对话历史（最近 50 条）</b>
+      <button class="panel-close" id="closePanel">✕</button>
+    </div>
+    <div class="panel-list" id="panelList"></div>
+  </div>
+
 <script>
+  // ================= 第一部分：登录态管理 =================
+  const TOKEN_KEY = 'rag_token';   // 存在浏览器里，下次打开页面免登录
+  const NAME_KEY = 'rag_username';
+  let token = localStorage.getItem(TOKEN_KEY) || '';
+  const username = localStorage.getItem(NAME_KEY) || '';
+
+  const overlay = document.getElementById('authOverlay');
+  const mainApp = document.getElementById('mainApp');
+  const authTip = document.getElementById('authTip');
+  const authTitle = document.getElementById('authTitle');
+
+  // 统一请求封装：自动带 token；后端返回 401 时自动登出回登录页
+  async function api(path, options = {}) {
+    const res = await fetch(path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...(options.headers || {}),
+      },
+    });
+    if (res.status === 401) {        // token 过期 / 无效 → 清掉并回登录页
+      logout('登录已过期，请重新登录');
+      throw new Error('unauthorized');
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || ('请求失败(' + res.status + ')'));
+    return data;
+  }
+
+  // 登录 / 注册表单提交
+  async function doLogin() {
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value;
+    if (!u || !p) { authTip.textContent = '请输入用户名和密码'; return; }
+    try {
+      const d = await api('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: u, password: p }),
+      });
+      token = d.access_token;                       // 拿到 JWT
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(NAME_KEY, d.username);
+      enterApp(d.username);
+    } catch (e) {
+      if (e.message !== 'unauthorized') authTip.textContent = e.message; // 401 已由 logout 处理
+    }
+  }
+
+  async function doRegister() {
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value;
+    if (!u || !p) { authTip.textContent = '请输入用户名和密码'; return; }
+    try {
+      await api('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username: u, password: p }),
+      });
+      authTip.textContent = '注册成功，请点击「登录」';
+      authTip.style.color = '#16a34a';
+      authTitle.textContent = '登录 LocalRAG-QA';
+      document.getElementById('password').value = '';
+    } catch (e) {
+      authTip.textContent = e.message;
+    }
+  }
+
+  // 登录成功 → 显示主界面，顺手拉一次历史（同时验证 token 是否有效）
+  function enterApp(name) {
+    overlay.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    document.getElementById('who').textContent = '👤 ' + name;
+    document.getElementById('q').focus();
+    loadHistory();
+  }
+
+  function logout(msg) {
+    token = '';
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(NAME_KEY);
+    mainApp.classList.add('hidden');
+    overlay.classList.remove('hidden');
+    document.getElementById('password').value = '';
+    authTip.textContent = msg || '';
+    authTip.style.color = 'var(--miss)';
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', doLogin);
+  document.getElementById('registerBtn').addEventListener('click', doRegister);
+  document.getElementById('logoutBtn').addEventListener('click', () => logout('已退出登录'));
+  document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  // ================= 第二部分：问答 =================
   const chat = document.getElementById('chat');
   const input = document.getElementById('q');
   const send = document.getElementById('send');
@@ -142,17 +327,15 @@
     const typing = addTyping();
 
     try {
-      const res = await fetch('/ask', {
+      const d = await api('/api/ask', {        // 登录版问答：后端会自动把这一轮写进数据库
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q })
+        body: JSON.stringify({ question: q }),
       });
-      const d = await res.json();
       typing.remove();
       addAnswer(d);
     } catch (e) {
       typing.remove();
-      addBubble('ai', '请求失败：' + e.message + '\n请确认服务正在运行。');
+      addBubble('ai', '请求失败：' + e.message + '\n请确认服务正在运行且已登录。');
     } finally {
       send.disabled = false;
       input.focus();
@@ -218,9 +401,70 @@
   send.addEventListener('click', ask);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
 
+  // ================= 第三部分：历史记录侧栏 =================
+  const panel = document.getElementById('panel');
+  const panelList = document.getElementById('panelList');
+  const mask = document.getElementById('mask');
+
+  function openPanel() {
+    panel.classList.remove('hidden');
+    mask.classList.remove('hidden');
+    loadHistory();
+  }
+  function closePanel() {
+    panel.classList.add('hidden');
+    mask.classList.add('hidden');
+  }
+
+  async function loadHistory() {
+    try {
+      const rows = await api('/api/chat/history?limit=50');
+      renderHistory(rows);
+    } catch (e) { /* 401 已由 api() 处理 */ }
+  }
+
+  function renderHistory(rows) {
+    panelList.innerHTML = '';
+    if (!rows.length) {
+      panelList.innerHTML = '<div class="empty-mini">还没有对话记录，先去问一个问题吧</div>';
+      return;
+    }
+    rows.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'h-item';
+
+      const q = document.createElement('div');       // 一行：命中标记 + 问题 + 时间
+      q.className = 'h-q';
+      const flag = document.createElement('span');
+      flag.className = 'flag' + (r.hit ? ' hit' : '');
+      const qtext = document.createElement('span');
+      qtext.textContent = r.question;
+      const time = document.createElement('span');
+      time.className = 'time';
+      time.textContent = r.created_at.slice(5, 16);  // 截成 "MM-DD HH:mm"
+      q.appendChild(flag); q.appendChild(qtext); q.appendChild(time);
+
+      const a = document.createElement('div');       // 回答默认收起，点击问题展开
+      a.className = 'h-a hidden';
+      a.textContent = r.answer;
+      q.addEventListener('click', () => a.classList.toggle('hidden'));
+
+      item.appendChild(q);
+      item.appendChild(a);
+      panelList.appendChild(item);
+    });
+  }
+
+  document.getElementById('historyBtn').addEventListener('click', openPanel);
+  document.getElementById('closePanel').addEventListener('click', closePanel);
+  mask.addEventListener('click', closePanel);
+
   // 顶部展示当前接入的模型
   fetch('/health').then(r => r.json()).catch(() => ({}))
     .then(h => { badge.textContent = (h && h.model ? h.model : '已连接'); });
+
+  // ================= 启动：有 token 直接进主界面，否则停在登录页 =================
+  if (token) enterApp(username);
 </script>
 </body>
 </html>

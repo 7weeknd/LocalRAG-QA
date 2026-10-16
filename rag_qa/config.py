@@ -3,9 +3,19 @@
 所有配置项都可通过环境变量覆盖，方便「本地跑通」与「接入真实大模型」两套场景切换：
 - 不开环境变量：走内置 TF-IDF 检索 + 抽取式回答（零依赖、开箱即跑）
 - 设置 LLM_* ：接入任意 OpenAI 兼容大模型（DeepSeek / 豆包 / 通义 / Ollama）
+- 设置 MYSQL_* / JWT_* ：启用全栈版（注册登录 + 对话历史入库）
+
+优先级：先加载项目根目录 .env 文件，再被真实环境变量覆盖。
 """
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# 项目根目录（rag_qa/ 的上一级），.env 就放在这里
+_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(_ROOT / ".env")
 
 
 @dataclass
@@ -34,6 +44,17 @@ class Config:
     llm_api_key: str = ""
     llm_model: str = ""
 
+    # MySQL 配置（全栈版：用户体系 + 对话历史入库）
+    db_host: str = "127.0.0.1"
+    db_port: int = 3306
+    db_user: str = "root"
+    db_password: str = ""
+    db_name: str = "rag_qa"
+
+    # JWT 配置（登录令牌）
+    jwt_secret: str = "dev-secret-change-me"  # 生产环境务必改成随机长串
+    jwt_expire_minutes: int = 60 * 24 * 7     # 令牌有效期：7 天
+
 
 def load_config() -> Config:
     """从环境变量读取配置，未设置时使用默认值。"""
@@ -49,4 +70,11 @@ def load_config() -> Config:
         llm_base_url=os.getenv("LLM_BASE_URL", ""),
         llm_api_key=os.getenv("LLM_API_KEY", ""),
         llm_model=os.getenv("LLM_MODEL", ""),
+        db_host=os.getenv("MYSQL_HOST", "127.0.0.1"),
+        db_port=int(os.getenv("MYSQL_PORT", "3306")),
+        db_user=os.getenv("MYSQL_USER", "root"),
+        db_password=os.getenv("MYSQL_PASSWORD", ""),
+        db_name=os.getenv("MYSQL_DB", "rag_qa"),
+        jwt_secret=os.getenv("JWT_SECRET", "dev-secret-change-me"),
+        jwt_expire_minutes=int(os.getenv("JWT_EXPIRE_MINUTES", str(60 * 24 * 7))),
     )

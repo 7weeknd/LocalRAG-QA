@@ -14,7 +14,7 @@ import time
 
 from .bm25 import BM25
 from .chunker import build_chunks
-from .config import Config
+from .config import Config, load_config
 from .embeddings import TfidfEmbedder
 from .hybrid import rrf_fuse
 from .llm import LLMClient
@@ -38,6 +38,17 @@ FALLBACK_ANSWER = (
 def _build_user_prompt(contexts: list[str], question: str) -> str:
     ctx = "\n\n".join(f"【片段 {i + 1}】\n{c}" for i, c in enumerate(contexts))
     return f"{ctx}\n\n【用户问题】\n{question}"
+
+
+# 进程级单例：索引只需构建一次，app 入口与各个路由共享同一个实例
+_pipeline: RAGPipeline | None = None
+
+
+def get_pipeline() -> RAGPipeline:
+    global _pipeline
+    if _pipeline is None:
+        _pipeline = RAGPipeline(load_config())
+    return _pipeline
 
 
 class RAGPipeline:
