@@ -9,8 +9,15 @@
 全栈能力（v0.2.0 起）：
 
 - **用户体系**：注册 / 登录，密码 bcrypt 哈希存储，JWT 令牌鉴权
-- **数据持久化**：问答记录自动写入 MySQL（SQLAlchemy ORM），历史可查
+- **数据持久化**：问答与文案生成记录自动写入 MySQL（SQLAlchemy ORM），历史可查
 - **Web 界面**：单页应用（原生 HTML/JS，无前端构建链），登录后在线问答
+
+AIGC 能力（v0.3.0 起）：
+
+- **AI 文案生成**：按「平台风格 + 语气 + 关键词」生成营销文案
+  （小红书 / 朋友圈 / 电商详情 / 通用），生成记录入库可回看。
+  与 RAG 问答共用同一套大模型客户端，但**提示词与温度不同**：
+  问答低温（0.2）求稳定、防幻觉；文案高温（0.8）求创意。
 
 ---
 
@@ -78,6 +85,12 @@
 - **自动建库建表**：启动时用 SQLAlchemy 自动 `CREATE DATABASE IF NOT EXISTS` + `create_all`，
   装好 MySQL 即可用，零手工 SQL；MySQL 未启动时仅禁用登录/历史功能，纯问答不受影响。
 
+### 9. AIGC 文案生成 `copywriter.py`
+- 与 RAG 问答是**两条独立链路**：问答「忠于知识库、禁止编造」，文案「追求创意与感染力」。
+- 用 `STYLES` 字典把每种平台风格抽象成一段「格式要求」，新增风格只需加一项配置，不改逻辑。
+- 生成参数 `temperature=0.8`（问答为 0.2）：温度越高，表达越发散、越有创意。
+- 生成结果写入 `copy_history`（输入与输出都保存，便于用同样条件复现）。
+
 ---
 
 ## 三、快速开始
@@ -125,9 +138,10 @@ curl -X POST http://127.0.0.1:8010/ask -H "Content-Type: application/json" \
 3. 双击 `start_web.bat`（或执行
    `uvicorn rag_qa.app:app --host 0.0.0.0 --port 8010`），浏览器自动打开
    `http://127.0.0.1:8010`；
-4. 页面上「注册新账号」→ 登录 → 开始问答，记录自动入库，点「历史」随时回看。
+4. 页面上「注册新账号」→ 登录 → 开始问答，记录自动入库，点「历史」随时回看；
+   切到顶部「AI 文案生成」标签页，填产品名 + 选平台风格 / 语气 → 点「生成文案」，即可生成并保存文案。
 
-> 首次启动会自动创建 `rag_qa` 库和 `users` / `chat_history` 两张表，无需手工执行 SQL。
+> 首次启动会自动创建 `rag_qa` 库和 `users` / `chat_history` / `copy_history` 三张表，无需手工执行 SQL。
 
 全栈版 API 一览：
 
@@ -137,6 +151,8 @@ curl -X POST http://127.0.0.1:8010/ask -H "Content-Type: application/json" \
 | POST | `/api/auth/login` | 登录，返回 JWT 令牌 | 否 |
 | POST | `/api/ask` | 问答，**自动写入对话历史** | 是（Bearer Token） |
 | GET  | `/api/chat/history?limit=50` | 查自己的对话历史（最新在前） | 是（Bearer Token） |
+| POST | `/api/copy` | AI 文案生成，**自动写入文案记录** | 是（Bearer Token） |
+| GET  | `/api/copy/history?limit=20` | 查自己的文案生成记录（最新在前） | 是（Bearer Token） |
 | POST | `/ask` | 公开问答（不记录历史） | 否 |
 | GET  | `/health` | 服务状态 + 当前模型 | 否 |
 
@@ -162,12 +178,13 @@ LocalRAG-QA/
 │   ├── cli.py         # 命令行问答
 │   ├── app.py         # FastAPI 入口（lifespan 建索引 + 自动建库建表）
 │   ├── database.py    # SQLAlchemy 引擎 / 会话 / 自动建库
-│   ├── models.py      # ORM 模型：User / ChatHistory
+│   ├── models.py      # ORM 模型：User / ChatHistory / CopyHistory
 │   ├── schemas.py     # Pydantic 入参出参模型
 │   ├── security.py    # bcrypt 密码哈希 + JWT 签发校验
-│   └── routes.py      # 注册/登录/问答落库/历史查询
+│   ├── copywriter.py  # AIGC 文案生成（平台风格模板 + 生成逻辑）
+│   └── routes.py      # 注册/登录/问答落库/历史查询/文案生成
 ├── static/
-│   └── index.html     # 单页前端（登录卡片 + 问答 + 历史侧栏）
+│   └── index.html     # 单页前端（登录卡片 + 问答 + AI 文案 + 历史侧栏）
 ├── data/docs/         # 知识库（6 篇电商客服文档）
 ├── tests/             # 冒烟测试
 ├── .env.example       # 配置模板（复制为 .env 使用；.env 不入库）

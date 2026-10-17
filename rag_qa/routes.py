@@ -1,10 +1,12 @@
-"""业务路由：注册 / 登录 / 问答（自动落库）/ 对话历史。
+"""业务路由：注册 / 登录 / 问答（自动落库）/ 对话历史 / AI 文案生成。
 
-全栈版的四个核心接口，统一挂在 /api 前缀下：
-- POST /api/auth/register  注册（用户名查重 → 密码哈希 → 入库）
-- POST /api/auth/login     登录（验密 → 签发 JWT）
-- POST /api/ask            问答（登录后：检索生成 → 自动写入对话历史）
-- GET  /api/chat/history   查询当前用户的对话历史（最新的在前）
+全栈版的接口，统一挂在 /api 前缀下：
+- POST /api/auth/register   注册（用户名查重 → 密码哈希 → 入库）
+- POST /api/auth/login      登录（验密 → 签发 JWT）
+- POST /api/ask             问答（登录后：检索生成 → 自动写入对话历史）
+- GET  /api/chat/history    查询当前用户的对话历史（最新的在前）
+- POST /api/copy            AI 文案生成（调用大模型 → 写入文案记录）
+- GET  /api/copy/history    查询当前用户的文案生成记录
 
 注意：登录版问答走 /api/ask；app.py 里原来的 /ask 保持公开，
 不登录也能问答（演示模式），只是不记录历史——两者互不干扰。
@@ -15,12 +17,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .copywriter import generate_copy
 from .database import get_db
-from .models import ChatHistory, User
+from .models import ChatHistory, CopyHistory, User
 from .pipeline import get_pipeline
 from .schemas import (
     AnswerResponse,
     AskRequest,
+    CopyHistoryItem,
+    CopyRequest,
+    CopyResponse,
     HistoryItem,
     LoginRequest,
     RegisterRequest,
@@ -104,6 +110,71 @@ def history(
             "sources": json.loads(r.sources) if r.sources else [],
             "hit": r.hit,
             "latency_ms": r.latency_ms,
+            "created_at": r.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        for r in rows
+    ]
+
+
+# ---------- AI 文案生成（AIGC） ----------
+@router.post("/copy", response_model=CopyResponse)
+def copy(
+    req: CopyRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """AI 文案生成：调用大模型生成营销文案，并写入 copy_history。"""
+    try:
+        result = generate_copy(req.product, req.style, req.tone, req.keywords)
+    except RuntimeError as exc:  # 未配置大模型
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc))
+    except Exception as exc:  # 大模型调用失败（网络/超时/返回异常）
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"大模型调用失败：{exc}")
+
+    row = CopyHistory(
+        user_id=user.id,  # 归属用户由 token 解析，前端无法伪造
+        product=req.product,
+        style=req.style,
+        tone=req.tone,
+        keywords=req.keywords or None,
+        content=result["content"],
+        latency_ms=result["latency_ms"],
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)  # 取回自增 id 与数据库生成的 created_at
+
+    return {
+        "id": row.id,
+        "product": row.product,
+        "style": row.style,
+        "tone": row.tone,
+        "content": row.content,
+        "latency_ms": row.latency_ms,
+        "created_at": row.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+@router.get("/copy/history", response_model=list[CopyHistoryItem])
+def copy_history(
+    limit: int = Query(20, ge=1, le=100, description="最多返回条数"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """查询当前用户最近的文案生成记录（倒序：最新的一条在最前）。"""
+    rows = db.scalars(
+        select(CopyHistory)
+        .where(CopyHistory.user_id == user.id)
+        .order_by(CopyHistory.created_at.desc(), CopyHistory.id.desc())
+        .limit(limit)
+    ).all()
+
+    return [
+        {
+            "id": r.id,
+            "product": r.product,
+            "style": r.style,
+            "content": r.content,
             "created_at": r.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
         for r in rows

@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="LocalRAG-QA · 本地私有化 RAG 知识库问答系统",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
