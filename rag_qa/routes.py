@@ -27,6 +27,7 @@ from .schemas import (
     CopyHistoryItem,
     CopyRequest,
     CopyResponse,
+    CopyUpdateRequest,
     HistoryItem,
     LoginRequest,
     RegisterRequest,
@@ -179,3 +180,45 @@ def copy_history(
         }
         for r in rows
     ]
+
+
+@router.delete("/chat/history/{id}")
+def delete_history(
+    id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """删除当前用户的一条对话记录（只能删自己的）。"""
+    row = db.get(ChatHistory, id)  # 按主键取一条；id 不存在时返回 None
+    if row is None or row.user_id != user.id:
+        # 统一返回 404：不暴露「记录是否存在」，防止被用来探测别人的数据
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "记录不存在")
+
+    db.delete(row)
+    db.commit()  # 不 commit 只在内存里标记删除，不会真正落库
+    return {"message": "已删除", "id": id}
+
+
+@router.patch("/copy/history/{id}", response_model=CopyHistoryItem)
+def update_copy(
+    id: int,
+    req: CopyUpdateRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """修改一条文案记录（只能改自己的）：把 AI 生成的文案改成自己想要的版本。"""
+    row = db.get(CopyHistory, id)  # 按主键取一条
+    if row is None or row.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "记录不存在")
+
+    row.content = req.content  # 直接改对象属性 —— ORM 的 UPDATE 就是这么简单
+    db.commit()  # 提交后才会生成 UPDATE 语句真正落库
+    db.refresh(row)  # 重新读回，拿到数据库最新值
+
+    return {
+        "id": row.id,
+        "product": row.product,
+        "style": row.style,
+        "content": row.content,
+        "created_at": row.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+    }

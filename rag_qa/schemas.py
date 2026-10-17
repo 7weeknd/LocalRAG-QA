@@ -80,3 +80,9 @@ class CopyHistoryItem(BaseModel):
     style: str
     content: str
     created_at: str
+
+
+class CopyUpdateRequest(BaseModel):
+    """修改文案的入参：只允许改正文。"""
+
+    content: str = Field(..., min_length=1, max_length=5000, description="修改后的文案正文")

@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
         database.init_db()
         print(
             f"[startup] MySQL 连接成功：库 {_config.db_name} "
-            "与表 users / chat_history 已就绪"
+            "与表 users / chat_history / copy_history 已就绪"
         )
     except Exception as exc:
         print(f"[warn] MySQL 初始化失败：{exc}")
@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="LocalRAG-QA · 本地私有化 RAG 知识库问答系统",
-    version="0.3.0",
+    version="0.3.1",
     lifespan=lifespan,
 )
 
