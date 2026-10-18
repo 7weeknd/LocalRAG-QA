@@ -42,27 +42,3 @@ class ChatHistory(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), index=True
     )
-
-
-class CopyHistory(Base):
-    """AI 文案生成记录（AIGC 模块）。
-
-    一条记录 = 一次文案生成：输入（产品/风格/语气/关键词）+ 输出（文案正文）。
-    把输入也存下来，方便以后「复用同样的条件再生成一次」。
-    """
-
-    __tablename__ = "copy_history"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
-    )
-    product: Mapped[str] = mapped_column(String(200), nullable=False)
-    style: Mapped[str] = mapped_column(String(50), nullable=False)
-    tone: Mapped[str] = mapped_column(String(20), nullable=False)
-    keywords: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    latency_ms: Mapped[float] = mapped_column(Float, default=0.0)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), index=True
-    )

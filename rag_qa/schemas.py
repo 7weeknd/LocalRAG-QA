@@ -50,39 +50,3 @@ class HistoryItem(BaseModel):
     hit: bool
     latency_ms: float
     created_at: str
-
-
-# ---------- AI 文案生成（AIGC） ----------
-class CopyRequest(BaseModel):
-    product: str = Field(..., min_length=1, max_length=100, description="产品 / 主题")
-    style: str = Field("xiaohongshu", max_length=50, description="平台风格")
-    tone: str = Field("活泼", max_length=20, description="语气")
-    keywords: str = Field("", max_length=200, description="必须包含的关键词")
-
-
-class CopyResponse(BaseModel):
-    """文案生成出参。"""
-
-    id: int
-    product: str
-    style: str
-    tone: str
-    content: str
-    latency_ms: float
-    created_at: str
-
-
-class CopyHistoryItem(BaseModel):
-    """文案生成记录单条出参。"""
-
-    id: int
-    product: str
-    style: str
-    content: str
-    created_at: str
-
-
-class CopyUpdateRequest(BaseModel):
-    """修改文案的入参：只允许改正文。"""
-
-    content: str = Field(..., min_length=1, max_length=5000, description="修改后的文案正文")

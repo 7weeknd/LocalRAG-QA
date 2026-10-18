@@ -250,13 +250,12 @@
       </div>
     </header>
 
-    <!-- 标签页：知识问答 / AI 文案生成 -->
+    <!-- 视图标签：本版本仅「知识问答」一个视图 -->
     <div class="tabs">
-      <button class="tab active" id="tabQa">知识问答</button>
-      <button class="tab" id="tabCopy">AI 文案生成</button>
+      <span class="tab active">知识问答</span>
     </div>
 
-    <!-- ===== 视图一：知识问答 ===== -->
+    <!-- ===== 视图：知识问答 ===== -->
     <div class="view" id="viewQa">
       <div class="chat" id="chat">
         <div class="empty">
@@ -268,42 +267,6 @@
         <input id="q" placeholder="输入你的问题…" autocomplete="off" />
         <button class="primary" id="send">发送</button>
       </div>
-    </div>
-
-    <!-- ===== 视图二：AI 文案生成（AIGC） ===== -->
-    <div class="view hidden" id="viewCopy">
-      <div class="copy-form">
-        <div class="field-row">
-          <div class="field grow">
-            <label>产品 / 主题</label>
-            <input id="copyProduct" placeholder="例如：无线降噪蓝牙耳机" autocomplete="off" />
-          </div>
-          <div class="field fixed">
-            <label>平台风格</label>
-            <select id="copyStyle">
-              <option value="xiaohongshu">小红书笔记</option>
-              <option value="moments">朋友圈 / 社群</option>
-              <option value="ecommerce">电商商品详情</option>
-              <option value="general">通用营销文案</option>
-            </select>
-          </div>
-          <div class="field fixed">
-            <label>语气</label>
-            <select id="copyTone">
-              <option>活泼</option>
-              <option>专业</option>
-              <option>亲切</option>
-              <option>高冷</option>
-            </select>
-          </div>
-        </div>
-        <div class="field">
-          <label>必须包含的关键词（可选，逗号分隔）</label>
-          <input id="copyKeywords" placeholder="例如：降噪, 长续航, 学生党" autocomplete="off" />
-        </div>
-        <button class="primary" id="copyBtn" style="padding:12px">生成文案</button>
-      </div>
-      <div class="copy-list" id="copyList"></div>
     </div>
   </div>
 
@@ -557,140 +520,6 @@
   document.getElementById('historyBtn').addEventListener('click', openPanel);
   document.getElementById('closePanel').addEventListener('click', closePanel);
   mask.addEventListener('click', closePanel);
-
-  // ================= 第四部分：AI 文案生成（AIGC） =================
-  const tabQa = document.getElementById('tabQa');
-  const tabCopy = document.getElementById('tabCopy');
-  const viewQa = document.getElementById('viewQa');
-  const viewCopy = document.getElementById('viewCopy');
-  const copyList = document.getElementById('copyList');
-  const copyBtn = document.getElementById('copyBtn');
-
-  // 风格代号 → 展示名
-  const STYLE_LABELS = {
-    xiaohongshu: '小红书笔记',
-    moments: '朋友圈 / 社群',
-    ecommerce: '电商商品详情',
-    general: '通用营销文案',
-  };
-  const styleLabel = s => STYLE_LABELS[s] || s;
-
-  // 标签页切换：问答 / 文案
-  function switchTab(which) {
-    const isQa = which === 'qa';
-    tabQa.classList.toggle('active', isQa);
-    tabCopy.classList.toggle('active', !isQa);
-    viewQa.classList.toggle('hidden', !isQa);
-    viewCopy.classList.toggle('hidden', isQa);
-    if (isQa) input.focus();
-    else { document.getElementById('copyProduct').focus(); loadCopyHistory(); }
-  }
-  tabQa.addEventListener('click', () => switchTab('qa'));
-  tabCopy.addEventListener('click', () => switchTab('copy'));
-
-  async function generateCopy() {
-    const product = document.getElementById('copyProduct').value.trim();
-    if (!product) { document.getElementById('copyProduct').focus(); return; }
-    const oldText = copyBtn.textContent;
-    copyBtn.disabled = true;
-    copyBtn.textContent = '生成中…';
-    const typing = addCopyTyping();
-    try {
-      await api('/api/copy', {                    // 后端生成文案并写入 copy_history
-        method: 'POST',
-        body: JSON.stringify({
-          product,
-          style: document.getElementById('copyStyle').value,
-          tone: document.getElementById('copyTone').value,
-          keywords: document.getElementById('copyKeywords').value.trim(),
-        }),
-      });
-      typing.remove();
-      await loadCopyHistory();
-    } catch (e) {
-      typing.remove();
-      copyList.prepend(copyErrorCard(e.message));
-    } finally {
-      copyBtn.disabled = false;
-      copyBtn.textContent = oldText;
-    }
-  }
-  copyBtn.addEventListener('click', generateCopy);
-
-  function addCopyTyping() {
-    const m = document.createElement('div');
-    m.className = 'copy-card';
-    const b = document.createElement('div');
-    b.className = 'body typing';
-    b.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-    m.appendChild(b);
-    copyList.prepend(m);
-    return m;
-  }
-
-  function copyErrorCard(msg) {
-    const m = document.createElement('div');
-    m.className = 'copy-card';
-    const b = document.createElement('div');
-    b.className = 'body';
-    b.style.color = 'var(--miss)';
-    b.textContent = '生成失败：' + msg;
-    m.appendChild(b);
-    return m;
-  }
-
-  async function loadCopyHistory() {
-    try {
-      const rows = await api('/api/copy/history?limit=20');
-      renderCopyList(rows);
-    } catch (e) { /* 401 已由 api() 处理 */ }
-  }
-
-  function renderCopyList(rows) {
-    copyList.innerHTML = '';
-    if (!rows.length) {
-      copyList.innerHTML = '<div class="empty-mini">还没有生成记录，填好上面信息点「生成文案」试试</div>';
-      return;
-    }
-    rows.forEach(r => copyList.appendChild(copyCard(r)));
-  }
-
-  function copyCard(r) {
-    const card = document.createElement('div');
-    card.className = 'copy-card';
-
-    const head = document.createElement('div');   // 标题 + 复制按钮
-    head.className = 'head';
-    const title = document.createElement('b');
-    title.textContent = r.product + ' · ' + styleLabel(r.style);
-    const btn = document.createElement('button');
-    btn.className = 'mini-btn';
-    btn.textContent = '复制';
-    btn.addEventListener('click', () => {
-      navigator.clipboard.writeText(r.content).then(() => {
-        btn.textContent = '已复制 ✓';
-        setTimeout(() => { btn.textContent = '复制'; }, 1500);
-      });
-    });
-    head.appendChild(title);
-    head.appendChild(btn);
-
-    const body = document.createElement('div');    // 文案正文
-    body.className = 'body';
-    body.textContent = r.content;
-
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    const t = document.createElement('span');
-    t.className = 'tag';
-    t.textContent = '🕒 ' + r.created_at.slice(5, 16);
-    meta.appendChild(t);
-
-    card.appendChild(head);
-    card.appendChild(body);
-    card.appendChild(meta);
-    return card;
-  }
 
   // 顶部展示当前接入的模型
   fetch('/health').then(r => r.json()).catch(() => ({}))
