@@ -66,7 +66,7 @@ app.include_router(api_router)
 def health():
     return {
         "status": "ok",
-        "model": _pipeline.llm.model if _pipeline.llm.enabled else "抽取式演示(未配置大模型)",
+        "model": _pipeline.llm_model_name if _pipeline.llm_enabled else "抽取式演示(未配置大模型)",
     }
 
 

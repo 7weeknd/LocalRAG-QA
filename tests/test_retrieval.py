@@ -1,49 +1,41 @@
-"""检索正确性的冒烟测试。
+"""知识库加载与切块冒烟测试。
 
-运行（在项目根目录 LocalRAG-QA/ 下）：
-    python -m pytest tests/test_retrieval.py -v
-或直接：
-    python tests/test_retrieval.py
+跑法（项目根目录下）：python tests/test_retrieval.py
+
+只验证「加载 → LangChain 切块」这条链路，不调用大模型和向量模型，
+所以不需要启动 Ollama 也能跑，适合当提交前的快速自检。
 """
 import sys
 from pathlib import Path
 
-# 保证能 import 到 rag_qa 包
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from rag_qa.config import load_config  # noqa: E402
-from rag_qa.pipeline import RAGPipeline  # noqa: E402
+from rag_qa.loaders import build_documents, load_documents  # noqa: E402
+
+DATA_DIR = "data/docs"
 
 
-def _pipeline():
-    config = load_config()
-    config.data_dir = str(Path(__file__).resolve().parent.parent / "data" / "docs")
-    pipe = RAGPipeline(config)
-    pipe.build()
-    return pipe
+def main():
+    docs = load_documents(DATA_DIR)
+    print(f"[1] 加载文档：{len(docs)} 篇")
+    assert docs, "没加载到任何文档，检查 data/docs 目录"
 
+    chunks = build_documents(DATA_DIR, chunk_size=300, overlap=50)
+    print(f"[2] 切块后片段：{len(chunks)} 个")
+    assert chunks, "切块结果为空"
+    assert len(chunks) >= len(docs), "片段数不应少于文档数"
 
-def test_build():
-    pipe = _pipeline()
-    assert len(pipe.chunks) > 0
+    titles = sorted({c.metadata.get("title", "") for c in chunks})
+    print(f"[3] 覆盖标题 {len(titles)} 个：{titles}")
+    assert all(titles), "存在没有标题的片段（元数据丢了）"
 
+    longest = max(len(c.page_content) for c in chunks)
+    print(f"[4] 最长片段 {longest} 字符（chunk_size=300）")
+    assert longest <= 340, "切块没有生效，片段超长"
 
-def test_retrieve_refund():
-    pipe = _pipeline()
-    r = pipe.ask("七天无理由退货运费由谁承担？")
-    assert r["hit"] is True
-    joined = "".join(c["title"] for c in r["citations"])
-    assert "退换货" in joined
-
-
-def test_fallback_unknown():
-    pipe = _pipeline()
-    r = pipe.ask("今天北京的天气怎么样？")
-    assert r["hit"] is False
+    print("\n全部通过")
+    return 0
 
 
 if __name__ == "__main__":
-    test_build()
-    test_retrieve_refund()
-    test_fallback_unknown()
-    print("全部测试通过")
+    sys.exit(main())

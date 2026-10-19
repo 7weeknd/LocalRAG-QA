@@ -20,7 +20,7 @@ def main():
     pipeline = RAGPipeline(config)
     n = pipeline.build()
     print(f"[OK] 索引构建完成：{n} 个知识片段，耗时 {pipeline._build_ms:.1f} ms")
-    print(f"   大模型：{'已接入 ' + config.llm_model if pipeline.llm.enabled else '未配置（抽取式演示）'}")
+    print(f"   大模型：{'已接入 ' + config.llm_model if pipeline.llm_enabled else '未配置（抽取式演示）'}")
     print("输入问题开始问答（输入 exit 退出）\n")
 
     while True:
