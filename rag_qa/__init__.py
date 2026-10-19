@@ -17,7 +17,8 @@
 - cli        : 命令行问答入口
 - app        : FastAPI 服务入口
 
-> main 分支的检索是手写实现（TF-IDF / BM25 / RRF），本分支改为 LangChain 组件并做了实测对比。
+> 早期版本的检索是手写实现（TF-IDF / BM25 / RRF），现已改为 LangChain 组件并做了实测对比
+> （手写版见 git 历史，提交 f3dadc2）。
 """
 
 __version__ = "0.1.0"

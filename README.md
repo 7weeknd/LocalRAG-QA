@@ -1,13 +1,13 @@
-# LocalRAG-QA · LangChain 版（`langchain` 分支）
+# LocalRAG-QA
 
 **本地私有化 RAG 知识库问答系统** · 检索与生成链路使用 **LangChain** 构建
 
-> 这个分支把 main 分支里手写的 TF-IDF / BM25 / RRF 检索链路，整体替换为 LangChain 组件。
-> **`main` 分支保持原样不动**，两个版本可以随时切换对比。
+> 早期版本的检索链路（TF-IDF / BM25 / RRF）是**手写实现**的，现已整体替换为 LangChain 组件。
+> 手写版完整保留在 git 历史里，想看两版差异：`git diff f3dadc2 main`。
 
-## 两个分支的区别
+## 两个版本的区别
 
-| | `main` 分支 | `langchain` 分支（本分支） |
+| | 早期手写版（历史提交 `f3dadc2`） | 当前版本（LangChain） |
 |---|---|---|
 | 文档加载 / 切块 | 手写 `chunker.py` | LangChain 加载器 + `RecursiveCharacterTextSplitter` |
 | 检索 | 手写 TF-IDF + BM25 + RRF 融合 | `OllamaEmbeddings` + `InMemoryVectorStore` 向量检索 |
@@ -187,7 +187,8 @@ LocalRAG-QA/
 └── README.md
 ```
 
-> 已删除（相对 main）：`tokenizer.py`、`embeddings.py`、`bm25.py`、`hybrid.py`、`chunker.py`、`llm.py`。
+> 早期手写版里的 `tokenizer.py`、`embeddings.py`、`bm25.py`、`hybrid.py`、`chunker.py`、`llm.py`
+> 已不在当前版本中（需要时从 git 历史 `f3dadc2` 取回）。
 
 ---
 

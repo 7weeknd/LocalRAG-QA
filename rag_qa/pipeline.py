@@ -8,7 +8,8 @@
 5. 生成：用 LCEL 把「Prompt | 模型 | 输出解析器」串成一条链（| 就是管道）
 6. 返回：答案 + 是否命中 + 引用来源 + 耗时
 
-与 main 分支的区别：检索与生成全部换成 LangChain 组件，不再手写 TF-IDF / BM25 / RRF。
+历史沿革：早期版本的检索是手写的 TF-IDF / BM25 / RRF，现改为 LangChain 组件
+（手写版见 git 历史，提交 f3dadc2）。
 对外契约保持不变（build() 返回片段数、ask() 返回同样六个字段），所以 routes / schemas / 前端都不用改。
 """
 from __future__ import annotations
