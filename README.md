@@ -2,26 +2,11 @@
 
 **本地私有化 RAG 知识库问答系统** · 检索与生成链路使用 **LangChain** 构建
 
-> 早期版本的检索链路（TF-IDF / BM25 / RRF）是**手写实现**的，现已整体替换为 LangChain 组件。
-> 手写版完整保留在 git 历史里，想看两版差异：`git diff f3dadc2 main`。
-
-## 两个版本的区别
-
-| | 早期手写版（历史提交 `f3dadc2`） | 当前版本（LangChain） |
-|---|---|---|
-| 文档加载 / 切块 | 手写 `chunker.py` | LangChain 加载器 + `RecursiveCharacterTextSplitter` |
-| 检索 | 手写 TF-IDF + BM25 + RRF 融合 | `OllamaEmbeddings` + `InMemoryVectorStore` 向量检索 |
-| 生成 | 手写 requests 调 `/api/chat` | LCEL 链：`Prompt \| ChatOllama \| StrOutputParser` |
-| 中文分词 | jieba + n-gram 降级 | 不需要（交给向量模型） |
-| 依赖 | 少（numpy / requests） | 多（langchain-core / langchain-ollama / langchain-community） |
-| 手写算法 | TF-IDF、BM25、RRF 全部手写 | 无，全部用框架 |
-| 对外接口 | 完全一致（路由 / 数据库 / 前端都不用改） | 同左 |
-
 ---
 
-## 一、系统架构（LangChain 版）
+## 一、系统架构
 
-```
+
 用户提问
    │
    ▼
@@ -85,9 +70,8 @@ chain = ChatPromptTemplate.from_messages([
 
 ---
 
-## 三、防幻觉：阈值是实测校准出来的，不是拍脑袋写的
+## 三、防幻觉
 
-换成向量检索后，相似度的分布和 TF-IDF 完全不同，所以阈值必须重新标定。
 实测数据（`nomic-embed-text` + 12 个片段）：
 
 | 问题 | 最高相似度 | 问题词覆盖率 |
@@ -110,7 +94,7 @@ chain = ChatPromptTemplate.from_messages([
 
 ---
 
-## 四、已知不足（如实记录）
+## 四、已知不足
 
 1. **本地 0.8B 模型指令遵循能力弱**：实测「怎么开电子发票？」检索完全正确
    （答案就在 Top-1 片段里，已用诊断脚本确认），但模型仍输出兜底话术。
@@ -122,7 +106,7 @@ chain = ChatPromptTemplate.from_messages([
 
 ## 五、快速开始
 
-> 环境要求：Python 3.10+；MySQL（全栈版需要）；Ollama
+> 环境要求：Python 3.10+；MySQL；Ollama
 
 ```bash
 # 1. 模型：对话模型 + 向量模型
@@ -137,7 +121,6 @@ pip install -r requirements.txt
 启动：
 
 ```bash
-python -m rag_qa.cli                 # 命令行版
 uvicorn rag_qa.app:app --port 8010   # API + Web 版（或双击 start_web.bat）
 ```
 
@@ -173,8 +156,8 @@ python tests/test_retrieval.py       # 加载 + 切块冒烟测试，不依赖 O
 LocalRAG-QA/
 ├── rag_qa/
 │   ├── config.py      # 配置（含 embedding_model / 校准后的阈值）
-│   ├── loaders.py     # 【新】LangChain 加载器 + 递归切块
-│   ├── pipeline.py    # 【重写】向量库 + 检索 + LCEL 生成链
+│   ├── loaders.py     # LangChain 加载器 + 递归切块
+│   ├── pipeline.py    # 向量库 + 检索 + LCEL 生成链
 │   ├── app.py         # FastAPI 入口
 │   ├── database.py    # SQLAlchemy 引擎 / 会话 / 自动建库
 │   ├── models.py      # ORM：User / ChatHistory
@@ -187,10 +170,6 @@ LocalRAG-QA/
 └── README.md
 ```
 
-> 早期手写版里的 `tokenizer.py`、`embeddings.py`、`bm25.py`、`hybrid.py`、`chunker.py`、`llm.py`
-> 已不在当前版本中（需要时从 git 历史 `f3dadc2` 取回）。
-
----
 
 ## 八、后续可扩展方向
 
